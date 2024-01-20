@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, time::UNIX_EPOCH, f32::consts::PI};
+use std::{f32::consts::PI, time::UNIX_EPOCH};
 
 use font_kit::family_name::FamilyName;
 use font_kit::properties::Properties;
@@ -45,9 +45,9 @@ fn run() {
     let mut dt = DrawTarget::new(size.0 as i32, size.1 as i32);
     while window.is_open() && !window.is_key_down(Key::Escape) {
         let now = std::time::SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_millis();
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis();
         dt.clear(SolidSource::from_unpremultiplied_argb(
             0xff, 0xff, 0xff, 0xff,
         ));

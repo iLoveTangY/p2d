@@ -1,3 +1,5 @@
+use crate::vec2::Vec2;
+
 pub struct Circle {
     density: f32,
     radius: f32,
@@ -18,11 +20,11 @@ impl Circle {
 
 pub struct AABB {
     density: f32,
-    // min: Vec2,
-    // max: Vec2,
+    min: Vec2,
+    max: Vec2,
 }
 
 pub enum Shape {
-    Circle,
-    AABB,
+    Circle(Circle),
+    AABB(AABB),
 }
