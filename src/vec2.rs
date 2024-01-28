@@ -1,4 +1,4 @@
-use std::ops::{self, Mul};
+use std::ops::{self, AddAssign, Mul, SubAssign};
 
 /// 2d vector
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -8,15 +8,17 @@ pub struct Vec2 {
 }
 
 impl Vec2 {
+    pub const ZERO: Self = Self::splat(0.0);
+
     /// creates a new `Vec2`
     #[inline(always)]
-    pub fn new(x: f32, y: f32) -> Vec2 {
+    pub const fn new(x: f32, y: f32) -> Vec2 {
         Vec2 { x, y }
     }
 
     /// creates a `Vec2` with all elements set to `v`
-    #[inline]
-    pub fn splat(v: f32) -> Vec2 {
+    #[inline(always)]
+    pub const fn splat(v: f32) -> Vec2 {
         Vec2 { x: v, y: v }
     }
 
@@ -149,6 +151,20 @@ impl ops::Add<Vec2> for f32 {
     }
 }
 
+impl ops::AddAssign<Vec2> for Vec2 {
+    fn add_assign(&mut self, rhs: Vec2) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+    }
+}
+
+impl ops::AddAssign<f32> for Vec2 {
+    fn add_assign(&mut self, rhs: f32) {
+        self.x += rhs;
+        self.y += rhs;
+    }
+}
+
 impl ops::Sub<Vec2> for Vec2 {
     type Output = Vec2;
 
@@ -179,6 +195,20 @@ impl ops::Sub<Vec2> for f32 {
     #[inline]
     fn sub(self, rhs: Vec2) -> Self::Output {
         -(rhs - self)
+    }
+}
+
+impl SubAssign<Vec2> for Vec2 {
+    fn sub_assign(&mut self, rhs: Vec2) {
+        self.x -= rhs.x;
+        self.y -= rhs.y;
+    }
+}
+
+impl SubAssign<f32> for Vec2 {
+    fn sub_assign(&mut self, rhs: f32) {
+        self.x -= rhs;
+        self.y -= rhs;
     }
 }
 
@@ -267,6 +297,12 @@ impl From<Vec2> for (f32, f32) {
     #[inline]
     fn from(v: Vec2) -> Self {
         (v.x, v.y)
+    }
+}
+
+impl Default for Vec2 {
+    fn default() -> Self {
+        Self::ZERO
     }
 }
 
