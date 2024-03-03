@@ -1,4 +1,4 @@
-use std::{cell::RefCell, io::SeekFrom};
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     body::Body,
@@ -6,9 +6,9 @@ use crate::{
     vec2::Vec2,
 };
 
-pub struct Manifold<'a> {
-    a: RefCell<&'a Body>,
-    b: RefCell<&'a Body>,
+pub struct Manifold {
+    a: Rc<RefCell<Body>>,
+    b: Rc<RefCell<Body>>,
 
     // A 的碰撞法线，单位向量
     normal: Vec2,
@@ -20,8 +20,8 @@ pub struct Manifold<'a> {
     contacts: Vec<Vec2>,
 }
 
-impl<'a> Manifold<'a> {
-    pub fn new(a: RefCell<&'a Body>, b: RefCell<&'a Body>) -> Manifold<'a> {
+impl Manifold {
+    fn new(a: Rc<RefCell<Body>>, b: Rc<RefCell<Body>>) -> Manifold {
         Manifold {
             a,
             b,
@@ -33,23 +33,27 @@ impl<'a> Manifold<'a> {
     }
     /// 碰撞求解
     /// 解出碰撞点和碰撞法向量
-    pub fn solve(&mut self) {
-        let a = self.a.borrow();
-        let b = self.b.borrow();
-        match (a.shape_type(), b.shape_type()) {
+    pub fn solve(a: Rc<RefCell<Body>>, b: Rc<RefCell<Body>>) -> Manifold {
+        // let a = self.a.borrow();
+        let a_type = a.borrow().shape_type();
+        let b_type = b.borrow().shape_type();
+        // let b = self.b.borrow();
+        let mut m = Manifold::new(a, b);
+        match (a_type, b_type) {
             (ShapeType::Circle(ref circle_a), ShapeType::Circle(ref circle_b)) => {
-                self.circle_2_circle(circle_a, circle_b);
+                m.circle_2_circle(circle_a, circle_b);
             }
             (ShapeType::Circle(ref circle), ShapeType::AABB(ref aabb)) => {
-                self.circle_2_aabb(circle, aabb);
+                m.circle_2_aabb(circle, aabb);
             }
             (ShapeType::AABB(ref aabb), ShapeType::Circle(ref circle)) => {
-                self.aabb_2_circle(aabb, circle);
+                m.aabb_2_circle(aabb, circle);
             }
             (ShapeType::AABB(ref aabb_a), ShapeType::AABB(ref aabb_b)) => {
-                self.aabb_2_aabb(aabb_a, aabb_b);
+                m.aabb_2_aabb(aabb_a, aabb_b);
             }
         }
+        m
     }
 
     pub fn get_contacts(&self) -> &Vec<Vec2> {
@@ -67,7 +71,10 @@ impl<'a> Manifold<'a> {
         let b = self.b.borrow();
         // 两个物体的质量都是无穷大
         if (a.restitution() + b.restitution()).abs() < 0.00001 {
-            self.infinite_mass_correction();
+            let mut a = self.a.borrow_mut();
+            let mut b = self.b.borrow_mut();
+            a.set_velocity(Vec2::ZERO);
+            b.set_velocity(Vec2::ZERO);   
             return;
         }
         // 相对速度在碰撞法线方向的分量
@@ -113,17 +120,15 @@ impl<'a> Manifold<'a> {
         } else {
             self.penetration = r - dist;
             self.normal = n / dist;
-            self.contacts.push(self.normal * circle_a.radius() + self.a.position());
+            self.contacts.push(self.normal * circle_a.radius() + a.position());
         }
     }
 
     fn circle_2_aabb(&mut self, circle: &Circle, aabb: &AABB) {
-        let mut a = self.a.borrow_mut();
-        let mut b = self.b.borrow_mut();
-        std::mem::swap(a, b);
+        std::mem::swap(&mut self.a, &mut self.b);
         self.aabb_2_circle(aabb, circle);
         self.normal = -self.normal;
-        std::mem::swap(a, b);
+        std::mem::swap(&mut self.a, &mut self.b);
     }
 
     // fn aabb_2_circle_impl()

@@ -1,13 +1,13 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{body::Body, manifold::Manifold, vec2::Vec2};
 
 pub struct World {
-    dt: i32,  // 每次循环的时间间隔
-    iterations: i32,  // 每次循环迭代次数
-    bodies: Vec<Body>,  // 场景中的所有物体
-    gravity_scale: f32,  // 重力放大倍数
-    gravity: Vec2,  // 重力大小
+    dt: i32,                        // 每次循环的时间间隔
+    iterations: i32,                // 每次循环迭代次数
+    bodies: Vec<Rc<RefCell<Body>>>, // 场景中的所有物体
+    gravity_scale: f32,             // 重力放大倍数
+    gravity: Vec2,                  // 重力大小
 }
 
 impl World {
@@ -21,27 +21,60 @@ impl World {
             iterations,
             bodies: vec![],
             gravity_scale: gravity_scale,
-            gravity: Vec2::new(0., 10.0 * gravity_scale)
+            gravity: Vec2::new(0., 10.0 * gravity_scale),
         }
     }
 
-    pub fn get_bodies(&self) -> &Vec<Body> {
+    pub fn get_bodies(&self) -> &Vec<Rc<RefCell<Body>>> {
         &self.bodies
     }
 
+    pub fn add_body(&mut self, body: Body) {
+        self.bodies.push(Rc::new(RefCell::new(body)));
+    }
+
     pub fn step(&mut self) {
+        // 碰撞检测
+        // Broad Phase + Narrow Phase
         let mut contacts = vec![];
         for (i, a) in self.bodies.iter().enumerate() {
             for b in self.bodies[i + 1..].iter() {
-                if a.inverse_mass() == 0. && b.inverse_mass() == 0. {
+                if a.borrow().inverse_mass() == 0. && b.borrow().inverse_mass() == 0. {
+                    // 两个物体的质量都是无穷大，不会发生位置的变化
                     continue;
                 }
-                let mut m = Manifold::new(RefCell::new(a), RefCell::new(b));
-                m.solve();
+                let mut m = Manifold::solve(a.clone(), b.clone());
                 if m.get_contacts().len() > 0 {
                     contacts.push(m);
                 }
             }
         }
+    }
+
+    // 把计算出来的力应用到物体上
+    fn integrate_forces(&self, body: Rc<RefCell<Body>>) {
+        let internal_body = body.borrow();
+        if internal_body.inverse_mass() == 0. {
+            return;
+        }
+        // v1 = v0 + F / m * dt
+        // TODO: 这里不使用 dt / 2 是否可以？
+        let new_velocity = internal_body.velocity()
+            + internal_body.force() * internal_body.inverse_mass() * (self.dt as f32 / 2.);
+        body.borrow_mut().set_velocity(new_velocity);
+    }
+
+    // 根据速度计算新的位置
+    fn itegrate_velocity(&self, body: Rc<RefCell<Body>>) {
+        {
+            let internal_body = body.borrow();
+            if internal_body.inverse_mass() == 0. {
+                return;
+            }
+            let new_pos = internal_body.position() + internal_body.velocity() * self.dt as f32;
+            body.borrow_mut().set_position(new_pos);
+        }
+        // 为了稳定？
+        self.integrate_forces(body);
     }
 }

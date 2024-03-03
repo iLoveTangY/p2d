@@ -57,6 +57,11 @@ impl Body {
     }
 
     #[inline(always)]
+    pub fn set_position(&mut self, pos: Vec2) {
+        self.position = pos;
+    }
+
+    #[inline(always)]
     pub fn inverse_mass(&self) -> f32 {
         self.inverse_mass
     }
@@ -69,6 +74,11 @@ impl Body {
     #[inline(always)]
     pub fn set_velocity(&mut self, v: Vec2) {
         self.velocity = v;
+    }
+
+    #[inline(always)]
+    pub fn force(&self) -> Vec2 {
+        self.force
     }
 
     pub fn shape_type(&self) -> ShapeType {
