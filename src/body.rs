@@ -91,6 +91,11 @@ impl Body {
     }
 
     #[inline(always)]
+    pub fn clear_force(&mut self) {
+        self.force = Vec2::ZERO;
+    }
+
+    #[inline(always)]
     pub fn apply_impulse(&mut self, impulse: Vec2) {
         self.velocity += impulse * self.inverse_mass;
     }

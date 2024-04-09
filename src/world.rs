@@ -25,14 +25,17 @@ impl World {
         }
     }
 
+    /// 获取 world 中所有刚体
     pub fn get_bodies(&self) -> &Vec<Rc<RefCell<Body>>> {
         &self.bodies
     }
 
+    /// world 中添加一个刚体
     pub fn add_body(&mut self, body: Body) {
         self.bodies.push(Rc::new(RefCell::new(body)));
     }
 
+    /// world 推进一步，并更新每个物体的位置
     pub fn step(&mut self) {
         // 碰撞检测
         // Broad Phase + Narrow Phase
@@ -48,6 +51,28 @@ impl World {
                     contacts.push(m);
                 }
             }
+        }
+
+        for body in &self.bodies {
+            self.integrate_forces(body.clone());
+        }
+
+        for contact in &mut contacts {
+            contact.initialize();
+        }
+
+        for _ in 0..self.iterations {
+            for contact in &mut contacts {
+                contact.apply_impulse();
+            }
+        }
+
+        for body in &self.bodies {
+            self.integrate_velocity(body.clone());
+        }
+
+        for body in &self.bodies {
+            body.borrow_mut().clear_force();
         }
     }
 
@@ -65,7 +90,7 @@ impl World {
     }
 
     // 根据速度计算新的位置
-    fn itegrate_velocity(&self, body: Rc<RefCell<Body>>) {
+    fn integrate_velocity(&self, body: Rc<RefCell<Body>>) {
         {
             let internal_body = body.borrow();
             if internal_body.inverse_mass() == 0. {

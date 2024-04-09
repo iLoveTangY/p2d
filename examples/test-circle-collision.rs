@@ -3,7 +3,7 @@ use std::{f32::consts::PI, time::UNIX_EPOCH};
 use font_kit::family_name::FamilyName;
 use font_kit::properties::Properties;
 use font_kit::source::SystemSource;
-use minifb::{Key, MouseMode, Window, WindowOptions};
+use minifb::{Key, MouseButton, MouseMode, Window, WindowOptions};
 use raqote::{DrawOptions, DrawTarget, PathBuilder, Point, SolidSource, Source};
 const WIDTH: usize = 400;
 const HEIGHT: usize = 400;
@@ -17,6 +17,14 @@ fn draw_ball(dt: &mut DrawTarget, pos: (f32, f32), _timestamp: u128) {
         &Source::Solid(SolidSource::from_unpremultiplied_argb(0xff, 0, 0xff, 0)),
         &DrawOptions::new(),
     );
+}
+
+struct MouseEventProcessor {
+
+}
+
+fn check_left_mouse_just_pressed(window: &Window) {
+
 }
 
 fn run() {
@@ -40,6 +48,7 @@ fn run() {
     //     .unwrap()
     //     .as_millis();
 
+    let mut left_mouse_pressed = false;
     let size = window.get_size();
     window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
     let mut dt = DrawTarget::new(size.0 as i32, size.1 as i32);
@@ -51,6 +60,15 @@ fn run() {
         dt.clear(SolidSource::from_unpremultiplied_argb(
             0xff, 0xff, 0xff, 0xff,
         ));
+        // 只处理第一次触发的左键按下事件
+        let left_mouse_down = window.get_mouse_down(minifb::MouseButton::Left);
+        if !left_mouse_pressed && left_mouse_down {
+            println!("left_mouse_down = {}", left_mouse_down);
+            left_mouse_pressed = true;
+        }
+        if !left_mouse_down && left_mouse_pressed {
+            left_mouse_pressed = false;
+        }
         if let Some(pos) = window.get_mouse_pos(MouseMode::Clamp) {
             draw_ball(&mut dt, pos, now);
 
