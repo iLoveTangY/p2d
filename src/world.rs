@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use crate::{body::Body, manifold::Manifold, vec2::Vec2};
 
 pub struct World {
-    dt: i32,                        // 每次循环的时间间隔
+    dt: f32,                        // 每次循环的时间间隔
     iterations: i32,                // 每次循环迭代次数
     bodies: Vec<Rc<RefCell<Body>>>, // 场景中的所有物体
     gravity_scale: f32,             // 重力放大倍数
@@ -15,7 +15,7 @@ impl World {
     /// * `dt`: 物理世界的更新频率
     /// * `iterations`: 每次 step 的循环次数
     /// * `gravity_scale`: 重力放大倍数
-    pub fn new(dt: i32, iterations: i32, gravity_scale: f32) -> World {
+    pub fn new(dt: f32, iterations: i32, gravity_scale: f32) -> World {
         World {
             dt,
             iterations,
@@ -85,7 +85,7 @@ impl World {
         // v1 = v0 + F / m * dt
         // TODO: 这里不使用 dt / 2 是否可以？
         let new_velocity = internal_body.velocity()
-            + internal_body.force() * internal_body.inverse_mass() * (self.dt as f32 / 2.);
+            + (self.gravity + internal_body.force() * internal_body.inverse_mass()) * (self.dt as f32 / 2.);
         body.borrow_mut().set_velocity(new_velocity);
     }
 
