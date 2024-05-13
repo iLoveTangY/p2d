@@ -17,7 +17,7 @@ pub struct Circle {
 impl Circle {
     pub fn new(radius: f32) -> Circle {
         Circle {
-            density: 0.0,
+            density: 1.0,
             radius,
         }
     }
@@ -55,6 +55,10 @@ impl AABB {
 
     pub fn min(&self) -> Vec2 {
         self.min
+    }
+
+    pub fn center(&self) -> Vec2 {
+        (self.min + self.max) / 2.
     }
 }
 

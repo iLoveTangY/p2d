@@ -46,7 +46,7 @@ impl World {
                     // 两个物体的质量都是无穷大，不会发生位置的变化
                     continue;
                 }
-                let mut m = Manifold::solve(a.clone(), b.clone());
+                let m = Manifold::solve(a.clone(), b.clone());
                 if m.get_contacts().len() > 0 {
                     contacts.push(m);
                 }
@@ -78,26 +78,26 @@ impl World {
 
     // 把计算出来的力应用到物体上
     fn integrate_forces(&self, body: Rc<RefCell<Body>>) {
-        let internal_body = body.borrow();
+        let mut internal_body = body.borrow_mut();
         if internal_body.inverse_mass() == 0. {
             return;
         }
-        // v1 = v0 + F / m * dt
+        // v1 = v0 + F / m * dt / 2
         // TODO: 这里不使用 dt / 2 是否可以？
         let new_velocity = internal_body.velocity()
             + (self.gravity + internal_body.force() * internal_body.inverse_mass()) * (self.dt as f32 / 2.);
-        body.borrow_mut().set_velocity(new_velocity);
+        internal_body.set_velocity(new_velocity);
     }
 
     // 根据速度计算新的位置
     fn integrate_velocity(&self, body: Rc<RefCell<Body>>) {
         {
-            let internal_body = body.borrow();
+            let mut internal_body = body.borrow_mut();
             if internal_body.inverse_mass() == 0. {
                 return;
             }
             let new_pos = internal_body.position() + internal_body.velocity() * self.dt as f32;
-            body.borrow_mut().set_position(new_pos);
+            internal_body.set_position(new_pos);
         }
         // 为了稳定？
         self.integrate_forces(body);

@@ -1,7 +1,7 @@
 use crate::{shape::{Circle, Shape, ShapeType, AABB}, vec2::Vec2};
 
 pub struct Body {
-    shape_type: ShapeType,
+    shape: ShapeType,
     position: Vec2,
     velocity: Vec2,
     restitution: f32,
@@ -16,7 +16,7 @@ impl Body {
         let mass = shape.mass();
         let inverse_mass = shape.mass_recip();
         Body {
-            shape_type: ShapeType::Circle(shape),
+            shape: ShapeType::Circle(shape),
             position,
             restitution,
             velocity: Vec2::ZERO,
@@ -31,7 +31,7 @@ impl Body {
         let mass = shape.mass();
         let inverse_mass = shape.mass_recip();
         Body {
-            shape_type: ShapeType::AABB(shape),
+            shape: ShapeType::AABB(shape),
             position,
             restitution,
             velocity: Vec2::ZERO,
@@ -81,8 +81,8 @@ impl Body {
         self.force
     }
 
-    pub fn shape_type(&self) -> ShapeType {
-        self.shape_type
+    pub fn shape(&self) -> ShapeType {
+        self.shape
     }
 
     #[inline(always)]

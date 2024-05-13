@@ -35,8 +35,8 @@ impl Manifold {
     /// 解出碰撞点和碰撞法向量
     pub fn solve(a: Rc<RefCell<Body>>, b: Rc<RefCell<Body>>) -> Manifold {
         // let a = self.a.borrow();
-        let a_type = a.borrow().shape_type();
-        let b_type = b.borrow().shape_type();
+        let a_type = a.borrow().shape();
+        let b_type = b.borrow().shape();
         // let b = self.b.borrow();
         let mut m = Manifold::new(a, b);
         match (a_type, b_type) {
@@ -67,12 +67,12 @@ impl Manifold {
     }
 
     pub fn apply_impulse(&mut self) {
-        let a = self.a.borrow();
-        let b = self.b.borrow();
+        let mut a = self.a.borrow_mut();
+        let mut b = self.b.borrow_mut();
         // 两个物体的质量都是无穷大
         if (a.restitution() + b.restitution()).abs() < 0.00001 {
-            let mut a = self.a.borrow_mut();
-            let mut b = self.b.borrow_mut();
+            // let mut a = self.a.borrow_mut();
+            // let mut b = self.b.borrow_mut();
             a.set_velocity(Vec2::ZERO);
             b.set_velocity(Vec2::ZERO);   
             return;
@@ -88,24 +88,17 @@ impl Manifold {
         let mut j = -(1.0 + self.e) * rv;
         j /= inv_mass_sum;
         let impulse = self.normal * j;
-        let mut a = self.a.borrow_mut();
-        let mut b = self.b.borrow_mut();
-        a.apply_impulse(impulse);
+        // let mut a = self.a.borrow_mut();
+        // let mut b = self.b.borrow_mut();
+        a.apply_impulse(-impulse);
         b.apply_impulse(impulse);
-    }
-
-    fn infinite_mass_correction(&mut self) {
-        let mut a = self.a.borrow_mut();
-        let mut b = self.b.borrow_mut();
-        a.set_velocity(Vec2::ZERO);
-        b.set_velocity(Vec2::ZERO);
     }
 
     fn circle_2_circle(&mut self, circle_a: &Circle, circle_b: &Circle) {
         let a = self.a.borrow();
         let b = self.b.borrow();
         let n = b.position() - a.position();
-        let r = circle_a.radius() - circle_b.radius();
+        let r = circle_a.radius() + circle_b.radius();
         let dist_sqr = n.length_squared();
         if dist_sqr >= r * r {
             // 无碰撞发生
@@ -136,12 +129,12 @@ impl Manifold {
     fn aabb_2_circle(&mut self, aabb: &AABB, circle: &Circle) {
         let a = self.a.borrow();
         let b = self.b.borrow();
-        // let mut difference = self.b.position() - self.a.position();
+        let mut difference = b.position() - a.position();
         let half_extend = (aabb.max() - aabb.min()) / 2.;
 
-        let clamped = half_extend.clamp(-half_extend, half_extend);
+        let clamped = difference.clamp(-half_extend, half_extend);
         let closet = a.position() + clamped;
-        let difference = closet - b.position();
+        difference = closet - b.position();
         if difference.length_squared() < circle.radius() * circle.radius() {
             self.contacts.push(closet);
             self.normal = b.position() - closet;
