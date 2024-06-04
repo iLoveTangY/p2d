@@ -1,6 +1,10 @@
-use std::ops::{self, AddAssign, Mul, SubAssign};
+use std::ops::{self, Mul, SubAssign};
+
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::wasm_bindgen;
 
 /// 2d vector
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Vec2 {
     pub x: f32,
@@ -9,17 +13,21 @@ pub struct Vec2 {
 
 impl Vec2 {
     pub const ZERO: Self = Self::splat(0.0);
-
-    /// creates a new `Vec2`
-    #[inline(always)]
-    pub const fn new(x: f32, y: f32) -> Vec2 {
-        Vec2 { x, y }
-    }
+    
 
     /// creates a `Vec2` with all elements set to `v`
     #[inline(always)]
     pub const fn splat(v: f32) -> Vec2 {
         Vec2 { x: v, y: v }
+    }
+}
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+impl Vec2 {
+    /// creates a new `Vec2`
+    #[inline(always)]
+    pub fn new(x: f32, y: f32) -> Vec2 {
+        Vec2 { x, y }
     }
 
     /// Returns `self` normalized to length 1.0
@@ -38,7 +46,7 @@ impl Vec2 {
     /// Returns `self` normalized to length 1.0 if possible, else returns `None`
     #[must_use]
     #[inline]
-    pub fn try_normalize(self) -> Option<Self> {
+    pub fn try_normalize(self) -> Option<Vec2> {
         let length_recip = self.length_recip();
         if length_recip.is_finite() {
             Some(self.mul(length_recip))

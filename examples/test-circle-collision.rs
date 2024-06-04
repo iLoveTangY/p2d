@@ -20,18 +20,14 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::keyboard::{KeyCode, PhysicalKey};
 use winit::window::WindowBuilder;
 
-fn draw_ball(dt: &mut DrawTarget, pos: Vec2, radius: f32) {
+fn draw_ball(dt: &mut DrawTarget, pos: Vec2, radius: f32, solid_source: SolidSource) {
     let mut pb = PathBuilder::new();
     pb.arc(pos.x, pos.y, radius, 0., 2. * PI);
     let path = pb.finish();
-    dt.fill(
-        &path,
-        &Source::Solid(SolidSource::from_unpremultiplied_argb(0xff, 0, 0xff, 0)),
-        &DrawOptions::new(),
-    );
+    dt.fill(&path, &Source::Solid(solid_source), &DrawOptions::new());
 }
 
-fn draw_aabb(dt: &mut DrawTarget, min: Vec2, max: Vec2, pos: Vec2) {
+fn draw_aabb(dt: &mut DrawTarget, min: Vec2, max: Vec2, pos: Vec2, solid_source: SolidSource) {
     let mut pb = PathBuilder::new();
     let half_extend = (max - min) / 2.;
     let left_top = pos - half_extend;
@@ -42,11 +38,7 @@ fn draw_aabb(dt: &mut DrawTarget, min: Vec2, max: Vec2, pos: Vec2) {
         half_extend.y * 2.,
     );
     let path = pb.finish();
-    dt.fill(
-        &path,
-        &Source::Solid(SolidSource::from_unpremultiplied_argb(0xff, 110, 123, 108)),
-        &DrawOptions::new(),
-    );
+    dt.fill(&path, &Source::Solid(solid_source), &DrawOptions::new());
 }
 
 fn render_fps(dt: &mut DrawTarget, fps: i32) {
@@ -67,24 +59,32 @@ fn render_fps(dt: &mut DrawTarget, fps: i32) {
 }
 
 fn render(dt: &mut DrawTarget, world: &World) {
-    dt.clear(SolidSource::from_unpremultiplied_argb(
-        0xff, 0xff, 0xff, 0xff,
-    ));
+    dt.clear(SolidSource::from_unpremultiplied_argb(0xff, 45, 64, 108));
 
     let bodies = world.get_bodies();
     for body in bodies {
         let inner_body = body.as_ref().borrow();
+        let solid_source = if inner_body.is_static() {
+            SolidSource::from_unpremultiplied_argb(0xff, 110, 123, 108)
+        } else {
+            SolidSource::from_unpremultiplied_argb(0xff, 0, 0xff, 0)
+        };
         match inner_body.shape() {
             p2d::shape::ShapeType::Circle(ref circle) => {
-                draw_ball(dt, inner_body.position(), circle.radius());
+                draw_ball(dt, inner_body.position(), circle.radius(), solid_source);
             }
             p2d::shape::ShapeType::AABB(ref aabb) => {
-                draw_aabb(dt, aabb.min(), aabb.max(), inner_body.position());
+                draw_aabb(
+                    dt,
+                    aabb.min(),
+                    aabb.max(),
+                    inner_body.position(),
+                    solid_source,
+                );
             }
         }
     }
 }
-
 
 const WINDOW_WIDTH: i32 = 800;
 const WINDOW_HEIGHT: i32 = 600;
@@ -131,6 +131,15 @@ fn render_loop(world: &mut World) {
                     let pos = mouse_position.unwrap();
                     world.add_body(Body::new_circle(Circle::new(30.), pos, 1.0));
                     println!("Left mouse button released");
+                } else if button == MouseButton::Right
+                    && state == winit::event::ElementState::Released
+                {
+                    let pos = mouse_position.unwrap();
+                    world.add_body(Body::new_aabb(
+                        AABB::new(Vec2::new(0., 0.), Vec2::new(60., 60.)),
+                        pos,
+                        1.0,
+                    ));
                 }
             }
             WindowEvent::RedrawRequested => {

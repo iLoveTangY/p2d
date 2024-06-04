@@ -1,0 +1,33 @@
+{
+    "name": "p2d-test",
+    "version": "0.1.0",
+    "description": "p2d test package",
+    "main": "index.js",
+    "bin": {
+    },
+    "scripts": {
+      "build": "webpack --config webpack.config.js",
+      "start": "set NODE_OPTIONS=--openssl-legacy-provider && webpack-dev-server"
+    },
+    "repository": {
+      "type": "git"
+    },
+    "keywords": [
+      "webassembly",
+      "wasm",
+      "rust",
+      "webpack",
+      "physics engine 2d"
+    ],
+    "author": "EnochTang<ytang007@163.com>",
+    "license": "(MIT OR Apache-2.0)",
+    "dependencies": {
+      "p2d": "file:../../pkg"
+    },
+    "devDependencies": {
+      "webpack": "^4.29.3",
+      "webpack-cli": "^3.1.0",
+      "webpack-dev-server": "^3.1.5",
+      "copy-webpack-plugin": "^5.0.0"
+    }
+  }

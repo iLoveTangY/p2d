@@ -8,6 +8,9 @@ pub struct Body {
     force: Vec2,
     mass: f32,
     inverse_mass: f32,
+
+    pub(crate) static_fraction: f32,
+    pub(crate) dynamic_fraction: f32,
 }
 
 impl Body {
@@ -23,6 +26,8 @@ impl Body {
             force: Vec2::ZERO,
             mass,
             inverse_mass,
+            static_fraction: 0.1,
+            dynamic_fraction: 0.05,
         }
     }
 
@@ -38,6 +43,8 @@ impl Body {
             force: Vec2::ZERO,
             mass,
             inverse_mass,
+            static_fraction: 0.1,
+            dynamic_fraction: 0.05,
         }
     }
 
@@ -104,5 +111,10 @@ impl Body {
     pub fn make_static(&mut self) {
         self.mass = 0.;
         self.inverse_mass = 0.;
+    }
+
+    #[inline(always)]
+    pub fn is_static(&self) -> bool {
+        self.mass.abs() < 0.00001
     }
 }

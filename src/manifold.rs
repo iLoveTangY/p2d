@@ -6,7 +6,7 @@ use crate::{
     vec2::Vec2,
 };
 
-pub struct Manifold {
+pub(crate) struct Manifold {
     a: Rc<RefCell<Body>>,
     b: Rc<RefCell<Body>>,
 
@@ -18,6 +18,10 @@ pub struct Manifold {
     e: f32,
     // 所有的碰撞点
     contacts: Vec<Vec2>,
+    // 碰撞计算时要使用的静摩擦力
+    sf: f32,
+    // 碰撞计算时要使用的动摩擦力
+    df: f32,
 }
 
 impl Manifold {
@@ -29,11 +33,13 @@ impl Manifold {
             penetration: 0.,
             e: 0.,
             contacts: vec![],
+            sf: 0.,
+            df: 0.,
         }
     }
     /// 碰撞求解
     /// 解出碰撞点和碰撞法向量
-    pub fn solve(a: Rc<RefCell<Body>>, b: Rc<RefCell<Body>>) -> Manifold {
+    pub(crate) fn solve(a: Rc<RefCell<Body>>, b: Rc<RefCell<Body>>) -> Manifold {
         // let a = self.a.borrow();
         let a_type = a.borrow().shape();
         let b_type = b.borrow().shape();
@@ -56,17 +62,19 @@ impl Manifold {
         m
     }
 
-    pub fn get_contacts(&self) -> &Vec<Vec2> {
+    pub(crate) fn get_contacts(&self) -> &Vec<Vec2> {
         &self.contacts
     }
 
-    pub fn initialize(&mut self) {
+    pub(crate) fn initialize(&mut self) {
         let a = self.a.borrow();
         let b = self.b.borrow();
         self.e = a.restitution().min(b.restitution());
+        self.sf = (a.static_fraction * a.static_fraction + b.static_fraction * b.static_fraction).sqrt();
+        self.df = (a.dynamic_fraction * a.dynamic_fraction + b.dynamic_fraction * b.dynamic_fraction).sqrt();
     }
 
-    pub fn apply_impulse(&mut self) {
+    pub(crate) fn apply_impulse(&mut self) {
         let mut a = self.a.borrow_mut();
         let mut b = self.b.borrow_mut();
         // 两个物体的质量都是无穷大
@@ -92,6 +100,30 @@ impl Manifold {
         // let mut b = self.b.borrow_mut();
         a.apply_impulse(-impulse);
         b.apply_impulse(impulse);
+
+        // 应用摩擦力
+        let rv_2 = b.velocity() - a.velocity();
+        let mut t = rv_2 - self.normal * (rv_2.dot(self.normal));
+        // 如果 t 为 0，不需要计算摩擦力
+        if (t.length_squared() - 0.).abs() <= 0.0001 {
+            return;
+        }
+        t = t.normalize();
+        // 计算切线方向冲量幅值
+        let mut jt = -rv_2.dot(t);
+        jt /= inv_mass_sum;
+        if jt.abs() < 0.00001 {
+            return;
+        }
+        // 库仑定律
+        let tangent_impulse;
+        if jt.abs() < j * self.sf {
+            tangent_impulse = t * jt;
+        } else {
+            tangent_impulse = t * (-j * self.df);
+        }
+        a.apply_impulse(-tangent_impulse);
+        b.apply_impulse(tangent_impulse);
     }
 
     fn circle_2_circle(&mut self, circle_a: &Circle, circle_b: &Circle) {
@@ -143,8 +175,39 @@ impl Manifold {
         }
     }
 
-    fn aabb_2_aabb(&mut self, _a: &AABB, _b: &AABB) {
-        todo!("Not implementaion yet!")
+    fn aabb_2_aabb(&mut self, first: &AABB, second: &AABB) {
+        let a = self.a.borrow();
+        let b = self.b.borrow();
+
+        let n = b.position() - a.position();
+        let mut a_extend = (first.max().x - first.min().x) / 2.;
+        let mut b_extend = (second.max().x - second.min().x) / 2.;
+        let x_overlap = a_extend + b_extend - n.x.abs();
+        if x_overlap > 0. {
+            a_extend = (first.max().y - first.min().y) / 2.;
+            b_extend = (second.max().y - second.min().y) / 2.;
+            let y_overlap = a_extend + b_extend - n.y.abs();
+            // x y 方向都得发生重叠才会发生碰撞
+            if y_overlap > 0. {
+                // 重叠小的方向是碰撞发生的方向
+                if x_overlap < y_overlap {
+                    if n.x < 0. {
+                        self.normal = Vec2::new(-1., 0.);
+                    } else {
+                        self.normal = Vec2::new(1., 0.);
+                    }
+                    self.penetration = x_overlap;
+                } else {
+                    if n.y < 0. {
+                        self.normal = Vec2::new(0., -1.);
+                    } else {
+                        self.normal = Vec2::new(0., 1.);
+                    }
+                    self.penetration = y_overlap;
+                }
+                self.contacts.push(Vec2::new(0., 0.));
+            }
+        }
     }
 
 }

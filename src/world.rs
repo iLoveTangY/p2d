@@ -35,6 +35,10 @@ impl World {
         self.bodies.push(Rc::new(RefCell::new(body)));
     }
 
+    pub(crate) fn add_rc_body(&mut self, body: Rc<RefCell<Body>>) {
+        self.bodies.push(body);
+    }
+
     /// world 推进一步，并更新每个物体的位置
     pub fn step(&mut self) {
         // 碰撞检测
@@ -75,7 +79,9 @@ impl World {
             body.borrow_mut().clear_force();
         }
     }
+}
 
+impl World {
     // 把计算出来的力应用到物体上
     fn integrate_forces(&self, body: Rc<RefCell<Body>>) {
         let mut internal_body = body.borrow_mut();
@@ -85,7 +91,8 @@ impl World {
         // v1 = v0 + F / m * dt / 2
         // TODO: 这里不使用 dt / 2 是否可以？
         let new_velocity = internal_body.velocity()
-            + (self.gravity + internal_body.force() * internal_body.inverse_mass()) * (self.dt as f32 / 2.);
+            + (self.gravity + internal_body.force() * internal_body.inverse_mass())
+                * (self.dt as f32 / 2.);
         internal_body.set_velocity(new_velocity);
     }
 
